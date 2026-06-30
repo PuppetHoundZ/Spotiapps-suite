@@ -10,7 +10,7 @@ A single self-contained bash script that installs and manages three Spotify apps
 |---|---|---|
 | **ncspot** | Terminal Spotify client — Vim keybindings, MPRIS media key support | [hrkfdn/ncspot](https://github.com/hrkfdn/ncspot) |
 | **spotifyd** | Spotify Connect daemon — makes your Pi appear as a speaker in any Spotify app on your network | [Spotifyd/spotifyd](https://github.com/Spotifyd/spotifyd) |
-| **Spotify Web** | Chromium PWA shortcut to open.spotify.com — isolated profile, RAM cache, tuned flags | — |
+| **Spotify Web** | Chromium PWA shortcut to open.spotify.com — isolated profile, RAM cache, tuned flags | flags custom chosen by PuppetHoundZ |
 
 ncspot and spotifyd are compiled from source via Rust/Cargo and packaged as `.deb` files. All three apps get desktop/app-menu shortcuts with embedded SVG icons.
 
