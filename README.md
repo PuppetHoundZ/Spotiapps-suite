@@ -2,6 +2,8 @@
 
 A single self-contained bash script that installs and manages three Spotify apps on Raspberry Pi OS Trixie: **ncspot**, **spotifyd**, and a tuned **Spotify Web** Chromium shortcut. Menu-driven, clean uninstalls, no system breakage.
 
+Part of [PuppetHoundZ/spotify-pwa](https://github.com/PuppetHoundZ/spotify-pwa.git).
+
 > Built and tested on a Raspberry Pi 4 (Pi OS Trixie, Debian 13 arm64) with a 7" 800×480 touchscreen and 1080p HDMI output.
 
 ## What it manages
