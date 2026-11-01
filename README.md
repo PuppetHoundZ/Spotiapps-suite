@@ -12,7 +12,7 @@ Part of [PuppetHoundZ/spotify-pwa](https://github.com/PuppetHoundZ/spotify-pwa.g
 |---|---|---|
 | **ncspot** | Terminal Spotify client — Vim keybindings, MPRIS media key support | [hrkfdn/ncspot](https://github.com/hrkfdn/ncspot) |
 | **spotifyd** | Spotify Connect daemon — makes your Pi appear as a speaker in any Spotify app on your network | [Spotifyd/spotifyd](https://github.com/Spotifyd/spotifyd) |
-| **Spotify Web** | Chromium PWA shortcut to open.spotify.com — isolated profile, RAM cache, tuned flags | flags custom chosen by PuppetHoundZ |
+| **Spotify Web** | Chromium PWA shortcut to open.spotify.com — isolated profile, RAM cache, tuned flags, no keyring prompt | flags custom chosen by PuppetHoundZ |
 
 ncspot and spotifyd are compiled from source via Rust/Cargo and packaged as `.deb` files. All three apps get desktop/app-menu shortcuts with embedded SVG icons.
 
@@ -23,6 +23,7 @@ ncspot and spotifyd are compiled from source via Rust/Cargo and packaged as `.de
 - ~2 GB free disk space (Rust toolchain + build artifacts — ncspot/spotifyd only)
 - Spotify **Premium** required for ncspot and spotifyd
 - Spotify Web works with both free and Premium accounts
+- Optional: the **More RAM** app from Pi-Apps (zram) — if installed, the Spotify Web cache uses compressed RAM at `/zram`
 
 ## Install
 
@@ -60,10 +61,17 @@ The script file itself can be stored, renamed, and moved anywhere you like (a sy
 | spotifyd config | `~/.config/spotifyd/` |
 | Spotify Web Chromium profile | `~/.config/webapps/spotify-web/` |
 | Audio cache (ncspot/spotifyd, runtime) | `/dev/shm/` (RAM, cleared on exit) |
-| Spotify Web disk cache | `/dev/shm/spotify-web-cache` (RAM) |
+| Spotify Web disk cache | `/zram/spotify-web-cache-$USER` if More RAM's zram is mounted, otherwise `/dev/shm/spotify-web-cache` (RAM) — chosen at install time |
 | App menu shortcuts | `~/.local/share/applications/` |
 | Icons | `~/.local/share/icons/hicolor/scalable/apps/` |
 | Optional pinned desktop launcher (Spotify Web) | `~/Desktop/` (prompted on install) |
+
+## Spotify Web notes
+
+- **Cache location:** the suite writes the Chromium flags straight into the shortcut, so the cache folder is picked when you install. If you add or remove the More RAM app later, reinstall Spotify Web (menu option 4). The standalone `manage_spotify.sh` checks at every launch instead.
+- **No keyring prompt:** `--password-store=basic` stops Chromium asking to unlock the keyring. Saved passwords for the Spotify profile only are stored unencrypted on disk (the same way Pi OS Bookworm did).
+- **Flags stay in sync** with `manage_spotify.sh` in [PuppetHoundZ/spotify-pwa](https://github.com/PuppetHoundZ/spotify-pwa), which is the canonical source.
+- **Better Chromium:** if you use Botspot's Better Chromium from Pi-Apps, its flags in `/etc/chromium.d/` also apply to Spotify Web. Check `chrome://version` in the Spotify window to see the final command line.
 
 ## Audio
 
@@ -95,9 +103,14 @@ Shared system dependencies (build tools, Rust toolchain, audio libraries, etc.) 
 - spotifyd auth: https://docs.spotifyd.rs/configuration/auth.html
 - MPRIS spec: https://specifications.freedesktop.org/mpris-spec/latest/
 - Raspberry Pi OS Trixie release notes: https://www.raspberrypi.com/news/raspberry-pi-os-trixie/
+- Better Chromium (Pi-Apps): https://github.com/Botspot/pi-apps/tree/master/apps/Better%20Chromium
+- Better Chromium zram cache idea: https://github.com/Botspot/pi-apps/commit/c98a30a1
+- Chromium password storage on Linux: https://chromium.googlesource.com/chromium/src/+/main/docs/linux/password_storage.md
 
 ## Disclaimer
 
 This script is provided as-is, free of charge, as part of an open source community effort for Raspberry Pi users. It is not affiliated with or endorsed by the ncspot project, spotifyd project, Raspberry Pi Ltd, or Spotify AB. Use it at your own risk. No warranty is expressed or implied.
 
 If it helps you — great. If you improve it — share it back.
+
+Licensed under the MIT License — see [LICENSE](LICENSE).
