@@ -30,6 +30,8 @@
 #     on Chromium 120+. Do not re-add.
 #   --disable-translate : REMOVED — CLI switch was pulled from Chromium.
 #     --disable-features=Translate (in the features block) covers it.
+#   --password-store=basic : PRESENT — no keyring unlock prompt in the
+#     isolated Spotify profile (mirrors manage_spotify.sh v1.5.7).
 #
 # FLAG REQUIREMENTS:
 #   --js-flags MUST be a quoted string: "--max-old-space-size=192 --optimize-for-size"
@@ -52,6 +54,13 @@
 #   800x480 touchscreen + 1080p HDMI. zram + log2ram active.
 #
 # VERSION HISTORY:
+#   v1.6.3 (2026-11) — Synced Spotify Web with manage_spotify.sh v1.5.7.
+#     ADDED --password-store=basic. SW_CACHE_DIR now uses
+#     /zram/spotify-web-cache-$USER when the Pi-Apps "More RAM" zram mount is
+#     present and writable, else /dev/shm/spotify-web-cache. The suite writes
+#     flags straight into the .desktop Exec line, so the location is chosen at
+#     install time (reinstall Spotify Web after adding/removing More RAM).
+#     Uninstall removes both cache locations.
 #   v1.6.2 (2026-06) — Synced Spotify Web Chromium flags to exact parity with
 #     manage_spotify.sh v1.5.6 (canonical source). ADDED: --user-data-dir
 #     (CRITICAL per manage_spotify.sh — isolates the Chromium profile; without
@@ -116,7 +125,7 @@
 # =============================================================================
 # Spotiapps_suite.sh
 # Spotify Apps Suite — Raspberry Pi
-# Version: 1.6.2
+# Version: 1.6.3
 # Last updated: 2026-06
 #
 # v1.6.2 — Synced Spotify Web Chromium flags to exact parity with
@@ -297,9 +306,10 @@ SPOTIAPPS_BUILD_ROOT="$HOME/.local/share/spotiapps-suite/build"
 #     Standard Chromium app window (--app= flag) is stable and correct.
 #
 # RAM cache note:
-#   /dev/shm is a tmpfs (RAM-backed) filesystem on Linux. Cache lives entirely
-#   in RAM — zero SD card reads or writes during playback.
-#   Uninstall cleans these up automatically.
+#   /dev/shm is a tmpfs (RAM-backed) filesystem on Linux. If the Pi-Apps
+#   "More RAM" app has mounted zram at /zram, the cache goes there instead
+#   (compressed RAM). Either way: zero SD card reads or writes during playback.
+#   Uninstall cleans up both locations automatically.
 #
 # JS heap note:
 #   --max-old-space-size=192 : Reduces GC thrash on Pi 4 (4 GB)
@@ -317,7 +327,16 @@ SPOTIAPPS_BUILD_ROOT="$HOME/.local/share/spotiapps-suite/build"
 
 SW_DESKTOP_FILE="$HOME/.local/share/applications/spotify-web.desktop"
 SW_ICON_FILE="$ICON_DIR/spotify-web.svg"
-SW_CACHE_DIR="/dev/shm/spotify-web-cache"
+SW_SHM_CACHE_DIR="/dev/shm/spotify-web-cache"
+SW_ZRAM_CACHE_DIR="/zram/spotify-web-cache-${USER}"
+# Prefer the More RAM app's zram mount (compressed RAM); fall back to /dev/shm.
+# Same check as Better Chromium's "Reduce writes" script (pi-apps c98a30a1).
+# Chosen at install time because the flags go straight into the Exec line.
+if [ -d /zram ] && [ -w /zram ] && zramctl -o MOUNTPOINT 2>/dev/null | grep -xq /zram; then
+    SW_CACHE_DIR="$SW_ZRAM_CACHE_DIR"
+else
+    SW_CACHE_DIR="$SW_SHM_CACHE_DIR"
+fi
 SW_PROFILE_DIR="$HOME/.config/webapps/spotify-web"   # isolated Chromium profile — matches manage_spotify.sh USER_DATA_DIR
 
 # Optional desktop launcher (pinned to ~/Desktop) — mirrors manage_spotify.sh
@@ -366,6 +385,7 @@ SW_FLAGS="--user-data-dir=${SW_PROFILE_DIR} \
 --no-first-run \
 --no-default-browser-check \
 --disable-sync \
+--password-store=basic \
 --disable-features=TranslateUI,AutofillAssistant,GlobalMediaControls,ChromeLabs,UseChromeOSDirectVideoDecoder"
 
 # NOTE: SW_FLAGS is kept in sync with manage_spotify.sh (the canonical standalone
@@ -466,7 +486,8 @@ EOF
     print_ok "Spotify Web shortcut installed."
     echo ""
     echo "  Optimizations active:"
-    print_info "Cache in RAM (/dev/shm) — no SD writes"
+    print_info "Cache in RAM (${SW_CACHE_DIR}) — no SD writes"
+    print_info "No keyring password prompt (--password-store=basic)"
     print_info "GPU shader/program cache disabled — no SD writes on launch"
     print_info "Crash reporting and telemetry disabled"
     print_info "Component updater disabled"
@@ -480,7 +501,7 @@ uninstall_spotify_web() {
     rm -f  "$SW_DESKTOP_FILE"
     rm -f  "$SW_ICON_FILE"
     rm -f  "$SW_DESKTOP_LAUNCHER"
-    rm -rf "$SW_CACHE_DIR"
+    rm -rf "$SW_SHM_CACHE_DIR" "$SW_ZRAM_CACHE_DIR"
     update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
     gtk-update-icon-cache -f -t "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
     print_ok "Spotify Web shortcut, desktop launcher, icon, and RAM cache removed."
@@ -1070,7 +1091,7 @@ do_uninstall() {
     echo "    • ncspot RAM cache (/dev/shm/ncspot)"
     echo "    • spotifyd RAM launcher (~/.local/bin/spotifyd-launch)"
     echo "    • spotifyd RAM cache (/dev/shm/spotifyd)"
-    echo "    • Spotify Web shortcut + icon + RAM cache (/dev/shm/spotify-web-cache)"
+    echo "    • Spotify Web shortcut + icon + RAM cache (/dev/shm or /zram)"
     echo "    • Build folders (ncspot/ and spotifyd/)"
     echo "    • cargo-deb"
     echo ""
@@ -1937,7 +1958,7 @@ echo ""
 if [[ "$INSTALL_SPOTIFY_WEB" == "true" ]]; then
     echo -e "  ${CYAN}Spotify Web${NC} — Chromium PWA shortcut"
     echo "              App menu: Sound & Video → Spotify Web"
-    echo "              Cache runs in RAM (/dev/shm/spotify-web-cache)"
+    echo "              Cache runs in RAM (${SW_CACHE_DIR})"
 fi
 if [[ "$BUILD_NCSPOT" == "true" ]]; then
     echo -e "  ${CYAN}ncspot${NC}    — Terminal Spotify client"
